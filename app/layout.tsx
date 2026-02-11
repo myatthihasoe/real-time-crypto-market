@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Real-time CryptoMarket",
-  description: "Crypto Screener App with a built-in High-Frequency Terminal Dashboard",
+  description:
+    "Crypto Screener App with a built-in High-Frequency Terminal Dashboard",
 };
 
 export default function RootLayout({
@@ -28,7 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-      <Header/>
+        <Header />
         {children}
       </body>
     </html>
