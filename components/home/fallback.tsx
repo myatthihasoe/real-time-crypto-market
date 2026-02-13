@@ -78,7 +78,7 @@ export function TrendingCoinsFallback() {
   );
 }
 
-export default {
-  CoinOverviewFallback,
-  TrendingCoinsFallback,
-};
+// export default {
+//   CoinOverviewFallback,
+//   TrendingCoinsFallback,
+// };
