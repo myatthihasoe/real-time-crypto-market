@@ -120,3 +120,27 @@ export const buildPageNumbers = (
 
   return pages;
 };
+
+// New helper: Normalize image src for Next.js Image.
+export function normalizeImageSrc(input?: string | null, fallback = "/file.svg") {
+  if (!input || typeof input !== "string") return fallback;
+  const s = input.trim();
+  if (!s) return fallback;
+
+  // Data or blob URIs are valid for <Image>
+  if (s.startsWith("data:") || s.startsWith("blob:")) return s;
+
+  // Protocol-relative URLs (//assets...) — make them https
+  if (s.startsWith("//")) return `https:${s}`;
+
+  // Absolute http/https or root-relative paths are acceptable
+  if (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("/")) return s;
+
+  // If it's a simple filename without protocol, make it root-relative
+  if (!s.includes(":") && !s.startsWith("/")) {
+    return `/${s}`;
+  }
+
+  // Otherwise fall back
+  return fallback;
+}

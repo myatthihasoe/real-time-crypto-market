@@ -2,7 +2,7 @@ import React from "react";
 import { fetcher } from "@/lib/coingecko.actions";
 import DataTable from "@/components/DataTable";
 import Image from "next/image";
-import { cn, formatCurrency, formatPercentage } from "@/lib/utils";
+import { cn, formatCurrency, formatPercentage, normalizeImageSrc } from "@/lib/utils";
 import { TrendingDown, TrendingUp } from "lucide-react";
 
 const Categories = async () => {
@@ -17,9 +17,10 @@ const Categories = async () => {
       header: "Top Gainers",
       cellClassName: "top-gainers-cell",
       cell: (category) =>
-        category.top_3_coins.map((coin) => (
-          <Image src={coin} alt={coin} key={coin} height={28} width={28} />
-        )),
+        category.top_3_coins.map((coin) => {
+          const img = normalizeImageSrc(coin);
+          return <Image src={img} alt={coin} key={coin} height={28} width={28} />;
+        }),
     },
     {
       header: "24h Change",

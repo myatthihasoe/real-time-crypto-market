@@ -1,7 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { cn, formatPercentage } from "@/lib/utils";
+import { cn, formatPercentage, normalizeImageSrc } from "@/lib/utils";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { fetcher } from "@/lib/coingecko.actions";
 import DataTable from "@/components/DataTable";
@@ -31,9 +31,10 @@ const TrendingCoins = async () => {
       cellClassName: "name-cell",
       cell: (coin) => {
         const item = coin.item;
+        const imgSrc = normalizeImageSrc(item.large);
         return (
           <Link href={`/coins/${item.id}`}>
-            <Image src={item.large} alt={item.name} width={36} height={36} />
+            <Image src={imgSrc} alt={item.name} width={36} height={36} />
             <p>{item.name}</p>
           </Link>
         );
