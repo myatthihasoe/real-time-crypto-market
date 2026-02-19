@@ -15,7 +15,7 @@ const CoinsPagination = ({
   currentPage,
   totalPages,
   hasMorePages,
-}: Pagination) => {
+}: PaginationCoinsTableProps) => {
   const router = useRouter();
   const handlePageChange = (page: number) => {
     router.push(`/coins?page=${page}`);
