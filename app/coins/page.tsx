@@ -6,10 +6,12 @@ import { cn, formatCurrency, formatPercentage, normalizeImageSrc } from "@/lib/u
 import CoinsPagination from "@/components/CoinsPagination";
 
 const Coins = async ({ searchParams }: NextPageProps) => {
-  const { page } = await searchParams;
-  const currentPage = Number(page) || 1;
+  const { page } = (await searchParams) ?? {};
+  const pageParam = Array.isArray(page) ? page[0] : page;
+  const pageNum = Number(pageParam);
+  const currentPage =
+    Number.isFinite(pageNum) && pageNum > 0 ? Math.floor(pageNum) : 1;
   const perPage = 10;
-
   const coinsData = await fetcher<CoinMarketData[]>("/coins/markets", {
     vs_currency: "usd",
     order: "market_cap_desc",
