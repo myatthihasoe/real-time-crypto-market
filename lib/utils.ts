@@ -121,7 +121,15 @@ export const buildPageNumbers = (
   return pages;
 };
 
-// New helper: Normalize image src for Next.js Image.
+/**
+ * Normalize an image source string for Next.js Image usage.
+ *
+ * Accepts data/blob URIs, protocol-relative URLs, absolute URLs, root-relative paths, or simple filenames and returns a normalized string suitable for <Image>.
+ *
+ * @param input - The raw image source to normalize (may be undefined or null).
+ * @param fallback - Path to use when `input` is missing or invalid; defaults to "/file.svg".
+ * @returns The normalized image src: `data:`/`blob:` URIs are returned as-is, protocol-relative URLs are prefixed with `https:`, simple filenames are prefixed with `/`, absolute (`http://`, `https://`) and root-relative (`/...`) paths are returned unchanged, or `fallback` when `input` is invalid.
+ */
 export function normalizeImageSrc(input?: string | null, fallback = "/file.svg") {
   if (!input || typeof input !== "string") return fallback;
   const s = input.trim();
