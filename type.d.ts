@@ -286,7 +286,7 @@ type PaginationLinkProps = {
     size?: ButtonSize;
 } & React.ComponentProps<'a'>;
 
-interface Pagination {
+interface PaginationCoinsTableProps {
     currentPage: number;
     totalPages: number;
     hasMorePages: boolean;
