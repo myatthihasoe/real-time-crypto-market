@@ -1,6 +1,5 @@
+'use client'
 import {useEffect, useRef, useState} from "react";
-import {Message} from "postcss";
-import {channel} from "node:diagnostics_channel";
 
 const WS_BASE = `${process.env.NEXT_PUBLIC_COINGECKO_WEBSOCKET_URL}?x_cg_pro_api_key=${process.env.NEXT_PUBLIC_COINGECKO_API_KEY}`;
 
@@ -12,70 +11,148 @@ export const useCoinGeckoWebsocket = ({
     const wsRef = useRef<WebSocket | null>(null)
     const subscribed = useRef(<Set<string>>new Set())
     const [price, setPrice] = useState<ExtendedPriceData | null>(null)
-    const [trades, setTrade] = useState<Trade[]>([])
+    // renamed setter to setTrades for clarity
+    const [trades, setTrades] = useState<Trade[]>([])
     const [ohlcv, setOhlcv] = useState<OHLCData | null>(null)
     const [isWsReady, setIsWsReady] = useState<boolean>(false)
 
     useEffect(() => {
-        const ws = new WebSocket(WS_BASE)
+        // Defensive: ensure we have a valid url before opening
+        if (!process.env.NEXT_PUBLIC_COINGECKO_WEBSOCKET_URL) {
+            console.warn('[useCoinGeckoWebsocket] NO websocket url configured')
+            return
+        }
+        let ws: WebSocket | null = null
+        try {
+            ws = new WebSocket(WS_BASE)
+        } catch (err) {
+            console.error('[useCoinGeckoWebsocket] failed to create websocket', err)
+            return
+        }
         wsRef.current = ws
 
-        const send = (payload: Record<string, unknown>) => ws.send(JSON.stringify(payload))
-        const handleMessage = (event: Message) => {
-            const msg: WebSocketMessage = JSON.parse(event.data)
-            //CGSimplePrice Websocket Coingecko
+        const safeSend = (payload: Record<string, unknown>) => {
+            try {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(payload))
+                } else {
+                    // queueing could be implemented here; for now log
+                    console.debug('[useCoinGeckoWebsocket] send requested but socket not open', payload)
+                }
+            } catch (err) {
+                console.error('[useCoinGeckoWebsocket] failed to send payload', err, payload)
+            }
+        }
+        const handleMessage = (event: MessageEvent) => {
+            let msg: any = null
+            try {
+                msg = JSON.parse(event.data)
+                // log raw message for debugging
+                console.debug('[useCoinGeckoWebsocket] raw msg', msg)
+            } catch (err) {
+                console.log('[useCoinGeckoWebsocket] failed to parse message', err)
+                return
+            }
+
+            // Helpful debug output while developing. Remove or lower log level in production.
+            console.log('[useCoinGeckoWebsocket] incoming message:', msg)
+
+            // handle ping
             if (msg.type === "ping") {
-                send({type: 'ping'})
+                safeSend({type: 'ping'})
                 return;
             }
-            if (msg.type === 'confirm_subscription') {
-                const {channel} = JSON.parse(msg?.identifier ?? '')
-                subscribed.current.add(channel)
+
+            // confirm subscription message structure from actioncable-style websockets
+            if (msg.type === 'confirm_subscription' || msg.type === 'welcome') {
+                try {
+                    const identifier = JSON.parse(msg?.identifier ?? '{}')
+                    if (identifier?.channel) {
+                        subscribed.current.add(identifier.channel)
+                        console.debug('[useCoinGeckoWebsocket] subscribed to', identifier.channel)
+                    }
+                } catch (err) {
+                    console.warn('[useCoinGeckoWebsocket] could not parse confirm_subscription identifier', err)
+                }
             }
-            if (msg.c === "C1") {
+
+            // C1 price message
+            if (msg.c === "C1" || msg.channel === 'CGSimplePrice') {
                 setPrice({
                     usd: msg.p ?? 0,
-                    coin: msg.i,
-                    price: msg.p,
+                    coin: msg.i ?? msg.coin ?? coinId,
+                    price: msg.p ?? 0,
                     change24h: msg.pp,
                     marketCap: msg.m,
                     volume24h: msg.v,
                     timestamp: msg.t,
                 })
             }
-            if (msg.c === "G2") {
+
+            // Onchain trade message (G2) — create a defensive mapping and log raw message to inspect structure
+            // CoinGecko G2 messages can sometimes arrive with different property names; try multiple fallbacks
+            if (msg.c === "G2" || msg.channel === 'OnchainTrade' || msg.channel === 'OnchainTrades') {
                 const newTrade: Trade = {
-                    price: msg.pu,
-                    value: msg.vo,
-                    timestamp: msg.t ?? 0,
-                    type: msg.ty,
-                    amount: msg.to,
+                    price: Number(msg.pu ?? msg.p ?? msg.price ?? 0),
+                    value: Number(msg.vo ?? msg.v ?? msg.value ?? 0),
+                    timestamp: Number(msg.t ?? msg.timestamp ?? Date.now()),
+                    type: (msg.ty ?? msg.type ?? (msg.s === 'sell' ? 's' : 'b')) as Trade['type'],
+                    amount: Number(msg.to ?? msg.a ?? msg.amount ?? 0),
                 }
-                setTrade((prev) => [newTrade, ...prev].slice(0, 7))
+                console.debug('[useCoinGeckoWebsocket] parsed trade', newTrade)
+                // prepend and keep up to 7 recent trades
+                setTrades((prev) => [newTrade, ...prev].slice(0, 7))
             }
 
-            //OnChainOHLCV Websocket Coingecko
-            if (msg.ch === "G3") {
-                const timestamp = msg.t ?? 0
+            // OnChainOHLCV Websocket Coingecko
+            if (msg.ch === "G3" || msg.channel === 'OnchainOHLCV') {
+                const timestamp = Number(msg.t ?? 0)
                 const candle: OHLCData = [timestamp, Number(msg.o ?? 0), Number(msg.h ?? 0), Number(msg.l ?? 0), Number(msg.c ?? 0)]
                 setOhlcv(candle)
             }
         };
-        ws.onopen = () => setIsWsReady(true)
+        ws.onopen = () => {
+            setIsWsReady(true)
+            console.info('[useCoinGeckoWebsocket] websocket opened', WS_BASE)
+        }
         ws.onmessage = handleMessage;
-        ws.onclose = () => setIsWsReady(false)
-        return () => ws.close()
+        ws.onclose = (ev) => {
+            setIsWsReady(false)
+            console.info('[useCoinGeckoWebsocket] websocket closed', ev)
+        }
+        ws.onerror = (err) => {
+            console.error('[useCoinGeckoWebsocket] websocket error', err)
+        }
+        return () => {
+            try {
+                ws?.close()
+            } catch (err) {
+                console.warn('[useCoinGeckoWebsocket] error closing socket', err)
+            }
+        }
     }, [])
 
     useEffect(() => {
         if (!isWsReady) return
         const ws = wsRef.current;
         if (!ws) return;
-        const send = (payload: Record<string, unknown>) => ws.send(JSON.stringify(payload))
+
+        const safeSend = (payload: Record<string, unknown>) => {
+            try {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(payload))
+                } else {
+                    console.debug('[useCoinGeckoWebsocket] send requested but socket not open', payload)
+                }
+            } catch (err) {
+                console.error('[useCoinGeckoWebsocket] failed to send payload', err, payload)
+            }
+        }
         const unsubscribeAll = () => {
             subscribed.current.forEach((channel) => {
-                send({
-                    command: 'unscribe',
+                // correct command name to 'unsubscribe'
+                safeSend({
+                    command: 'unsubscribe',
                     identifier: JSON.stringify({channel})
                 })
             })
@@ -84,9 +161,10 @@ export const useCoinGeckoWebsocket = ({
         const subscribe = (channel: string, data?: Record<string, unknown>) => {
 
             if (subscribed.current.has(channel)) return;
-            send({command: 'subscribe', identifier: JSON.stringify({channel})})
+            safeSend({command: 'subscribe', identifier: JSON.stringify({channel})})
+            console.debug('[useCoinGeckoWebsocket] subscribe requested for', channel, data)
             if (data) {
-                send({
+                safeSend({
                     command: 'message',
                     identifier: JSON.stringify({channel}),
                     data: JSON.stringify(data)
@@ -95,23 +173,26 @@ export const useCoinGeckoWebsocket = ({
         }
         queueMicrotask(() => {
             setPrice(null);
-            setTrade([])
+            setTrades([])
             setOhlcv(null)
 
             unsubscribeAll()
             subscribe("CGSimplePrice", {coin_id: [coinId], action: 'set_tokens'})
         })
-        const poolAddress = poolId.replace('_', ':')
-        if (poolAddress) {
-            subscribe('OnchainTrade', {
-                'network_id:pool_address': [poolAddress],
-                action: 'set_pools'
-            })
-            subscribe('OnchainOHLCV', {
-                'network_id:pool_address': [poolAddress],
-                liveInterval: liveInterval,
-                action: 'set_pools'
-            })
+        // guard poolId usage — poolId may be undefined in some callers
+        if (poolId) {
+            const poolAddress = poolId.replace('_', ':')
+            if (poolAddress) {
+                subscribe('OnchainTrade', {
+                    'network_id:pool_address': [poolAddress],
+                    action: 'set_pools'
+                })
+                subscribe('OnchainOHLCV', {
+                    'network_id:pool_address': [poolAddress],
+                    liveInterval: liveInterval,
+                    action: 'set_pools'
+                })
+            }
         }
     }, [coinId, poolId, isWsReady, liveInterval]);
     return {
@@ -120,4 +201,4 @@ export const useCoinGeckoWebsocket = ({
         ohlcv,
         isConnected: isWsReady
     }
-}
+ }

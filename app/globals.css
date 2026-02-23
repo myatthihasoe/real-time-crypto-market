@@ -586,10 +586,10 @@
       @apply bg-dark-500 rounded-xl max-h-fit overflow-hidden;
 
       .rank-cell {
-        @apply pl-5 max-w-20! py-5 font-medium text-purple-100;
+        @apply max-w-20! py-5 pl-5 font-medium text-purple-100;
 
         a {
-          @apply absolute inset-0 z-10;
+          @apply absolute inset-0 z-10 pl-5;
         }
       }
 
