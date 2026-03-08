@@ -4,6 +4,7 @@ import {ArrowUpRight} from "lucide-react";
 import Link from "next/link"
 import {formatCurrency} from "@/lib/utils";
 import LiveDataWrapper from "@/components/LiveDataWrapper"
+import Converter from "@/components/Converter";
 
 const Page = async ({params}: NextPageProps) => {
     const {id} = await params;
@@ -63,14 +64,14 @@ const Page = async ({params}: NextPageProps) => {
         },
     ]
     return (
-        <main id="coin-details-age">
+        <main id="coin-details-page">
             <section className="primary">
                 <LiveDataWrapper coinId={id} poolId={pool.id} coin={coinData} coinOHLCData={coinOHLCData}>
                     <h4>Exchange Listings</h4>
                 </LiveDataWrapper>
             </section>
             <section className="secondary">
-                <p>Currency Converter</p>
+                <Converter symbol={coinData.symbol} icon={coinData.image.small} priceList={coinData.market_data.current_price} />
                 <div className="details">
                     <h4>Coin Details</h4>
                     <ul className="details-grid">

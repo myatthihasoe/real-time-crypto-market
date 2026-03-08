@@ -1,4 +1,4 @@
-'use client'
+'use client';
 import {useEffect, useRef, useState} from "react";
 
 const WS_BASE = `${process.env.NEXT_PUBLIC_COINGECKO_WEBSOCKET_URL}?x_cg_pro_api_key=${process.env.NEXT_PUBLIC_COINGECKO_API_KEY}`;
@@ -44,7 +44,7 @@ export const useCoinGeckoWebsocket = ({
             }
         }
         const handleMessage = (event: MessageEvent) => {
-            let msg: any = null
+            let msg: WebSocketMessage;
             try {
                 msg = JSON.parse(event.data)
                 // log raw message for debugging
@@ -59,7 +59,7 @@ export const useCoinGeckoWebsocket = ({
 
             // handle ping
             if (msg.type === "ping") {
-                safeSend({type: 'ping'})
+                safeSend({type: 'pong'})
                 return;
             }
 
@@ -80,7 +80,7 @@ export const useCoinGeckoWebsocket = ({
             if (msg.c === "C1" || msg.channel === 'CGSimplePrice') {
                 setPrice({
                     usd: msg.p ?? 0,
-                    coin: msg.i ?? msg.coin ?? coinId,
+                    coin: msg.i ?? coinId,
                     price: msg.p ?? 0,
                     change24h: msg.pp,
                     marketCap: msg.m,
@@ -93,13 +93,13 @@ export const useCoinGeckoWebsocket = ({
             // CoinGecko G2 messages can sometimes arrive with different property names; try multiple fallbacks
             if (msg.c === "G2" || msg.channel === 'OnchainTrade' || msg.channel === 'OnchainTrades') {
                 const newTrade: Trade = {
-                    price: Number(msg.pu ?? msg.p ?? msg.price ?? 0),
-                    value: Number(msg.vo ?? msg.v ?? msg.value ?? 0),
-                    timestamp: Number(msg.t ?? msg.timestamp ?? Date.now()),
-                    type: (msg.ty ?? msg.type ?? (msg.s === 'sell' ? 's' : 'b')) as Trade['type'],
-                    amount: Number(msg.to ?? msg.a ?? msg.amount ?? 0),
+                    price: Number(msg.pu ?? msg.p ?? 0),
+                    value: Number(msg.vo ?? msg.v ?? 0),
+                    timestamp: Number(msg.t ?? Date.now()),
+                    type: (msg.ty ?? msg.type ?? (msg.type === 'sell' ? 's' : 'b')) as Trade['type'],
+                    amount: Number(msg.to ?? 0),
                 }
-                console.debug('[useCoinGeckoWebsocket] parsed trade', newTrade)
+                console.log('[useCoinGeckoWebsocket] parsed trade', newTrade)
                 // prepend and keep up to 7 recent trades
                 setTrades((prev) => [newTrade, ...prev].slice(0, 7))
             }
@@ -189,7 +189,7 @@ export const useCoinGeckoWebsocket = ({
                 })
                 subscribe('OnchainOHLCV', {
                     'network_id:pool_address': [poolAddress],
-                    liveInterval: liveInterval,
+                    interval: liveInterval,
                     action: 'set_pools'
                 })
             }

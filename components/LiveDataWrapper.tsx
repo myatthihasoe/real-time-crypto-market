@@ -1,12 +1,18 @@
-'use client'
+'use client';
 import {Separator} from "@/components/ui/separator"
 import CandlestickChart from "@/components/CandlestickChart"
 import {useCoinGeckoWebsocket} from "@/hooks/useCoinGeckoWebsocket";
 import {formatCurrency, timeAgo} from "@/lib/utils";
 import DataTable from "@/components/DataTable";
+import {useState} from "react";
+import CoinHeader from "@/components/CoinHeader";
 
 const LiveDataWrapper = ({children, coinId, poolId, coin, coinOHLCData}: LiveDataProps) => {
-    const {trades} = useCoinGeckoWebsocket({coinId, poolId})
+    const [liveInterval, setLiveInterval] = useState<'1s' | '1m'>('1s')
+    const {trades, ohlcv, price} = useCoinGeckoWebsocket({coinId, poolId, liveInterval})
+    console.log("[LiveDataWrapper] price",price)
+
+
     // debug - log trades to browser console so we can inspect incoming data
     console.log('[LiveDataWrapper] trades', trades)
     const tradeColumns: DataTableColumn<Trade>[] = [
@@ -44,10 +50,17 @@ const LiveDataWrapper = ({children, coinId, poolId, coin, coinOHLCData}: LiveDat
     ]
     return (
         <section id="live-data-wrapper">
-            <p>Coin Header</p>
+            <CoinHeader name={coin.name}
+                        image={coin.image.large}
+                        livePrice={price?.usd ?? coin.market_data.current_price.usd}
+                        livePriceChangePercentage24h={price?.change24h??coin.market_data.price_change_percentage_30d_in_currency.usd}
+                        priceChangePercentage30d={coin.market_data.price_change_percentage_30d_in_currency.usd}
+                        priceChange24h={coin.market_data.price_change_24h_in_currency.usd}
+            />
             <Separator className="divider"/>
             <div className="trend">
-                <CandlestickChart coinId={coinId} data={coinOHLCData} >
+                <CandlestickChart coinId={coinId} data={coinOHLCData} liveOhlcv={ohlcv} mode="live"
+                                  initialPeriod="daily" liveInterval={liveInterval} setLiveInterval={setLiveInterval}>
                     <h4>Trend Overview</h4>
                 </CandlestickChart>
             </div>
