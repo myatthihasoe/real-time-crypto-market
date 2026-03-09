@@ -22,8 +22,8 @@ export async function fetcher<T>(
     );
     const response = await fetch(url, {
         headers: {
-            'x-cg-pro-api-key':API_KEY,
-            "Content-Type":"application/json",
+            'x-cg-pro-api-key': API_KEY,
+            "Content-Type": "application/json",
         } as Record<string, string>,
         next: {revalidate},
     });
@@ -57,13 +57,9 @@ export async function getPools(
         return poolData.data?.[0] ?? fallback;
     }
 
-    try {
-        const poolData = await fetcher<{ data: PoolData[] }>(
-            "/onchain/search/pools",
-            {query: id}
-        );
-        return poolData.data?.[0] ?? fallback;
-    } catch {
-        return fallback;
-    }
+    const poolData = await fetcher<{ data: PoolData[] }>(
+        "/onchain/search/pools",
+        {query: id}
+    );
+    return poolData.data?.[0] ?? fallback;
 }

@@ -1,8 +1,6 @@
 'use client';
 import {useEffect, useRef, useState} from "react";
 
-const WS_BASE = `${process.env.NEXT_PUBLIC_COINGECKO_WEBSOCKET_URL}?x_cg_pro_api_key=${process.env.NEXT_PUBLIC_COINGECKO_API_KEY}`;
-
 export const useCoinGeckoWebsocket = ({
                                           coinId,
                                           poolId,
@@ -15,16 +13,27 @@ export const useCoinGeckoWebsocket = ({
     const [trades, setTrades] = useState<Trade[]>([])
     const [ohlcv, setOhlcv] = useState<OHLCData | null>(null)
     const [isWsReady, setIsWsReady] = useState<boolean>(false)
+    const [wsUrl, setWsUrl] = useState<string | null>(null)
+
+    useEffect(() => {
+        fetch('/api/websocket-url')
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch ws url');
+                return res.json();
+            })
+            .then(data => setWsUrl(data.url))
+            .catch(err => console.error('[useCoinGeckoWebsocket] Failed to fetch websocket url', err));
+    }, [])
 
     useEffect(() => {
         // Defensive: ensure we have a valid url before opening
-        if (!process.env.NEXT_PUBLIC_COINGECKO_WEBSOCKET_URL) {
+        if (!wsUrl) {
             console.warn('[useCoinGeckoWebsocket] NO websocket url configured')
             return
         }
         let ws: WebSocket | null = null
         try {
-            ws = new WebSocket(WS_BASE)
+            ws = new WebSocket(wsUrl)
         } catch (err) {
             console.error('[useCoinGeckoWebsocket] failed to create websocket', err)
             return
@@ -113,7 +122,7 @@ export const useCoinGeckoWebsocket = ({
         };
         ws.onopen = () => {
             setIsWsReady(true)
-            console.info('[useCoinGeckoWebsocket] websocket opened', WS_BASE)
+            console.info('[useCoinGeckoWebsocket] websocket opened', wsUrl)
         }
         ws.onmessage = handleMessage;
         ws.onclose = (ev) => {
@@ -130,7 +139,7 @@ export const useCoinGeckoWebsocket = ({
                 console.warn('[useCoinGeckoWebsocket] error closing socket', err)
             }
         }
-    }, [])
+    }, [wsUrl])
 
     useEffect(() => {
         if (!isWsReady) return
@@ -171,15 +180,12 @@ export const useCoinGeckoWebsocket = ({
                 })
             }
         }
-        queueMicrotask(() => {
-            setPrice(null);
-            setTrades([])
-            setOhlcv(null)
+        setPrice(null)
+        setTrades([])
+        setOhlcv(null)
+        unsubscribeAll()
+        subscribe("CGSimplePrice", {coin_id: [coinId], action: 'set_tokens'})
 
-            unsubscribeAll()
-            subscribe("CGSimplePrice", {coin_id: [coinId], action: 'set_tokens'})
-        })
-        // guard poolId usage — poolId may be undefined in some callers
         if (poolId) {
             const poolAddress = poolId.replace('_', ':')
             if (poolAddress) {
@@ -201,4 +207,4 @@ export const useCoinGeckoWebsocket = ({
         ohlcv,
         isConnected: isWsReady
     }
- }
+}
