@@ -16,17 +16,31 @@ export function formatCurrency(
     return showSymbol !== false ? "$0.00" : "0.00";
   }
 
+  // Determine digits dynamically if not provided
+  let effectiveDigits = digits;
+  if (effectiveDigits === undefined) {
+    if (Math.abs(value) >= 1) {
+      effectiveDigits = 2;
+    } else if (Math.abs(value) >= 0.01) {
+      effectiveDigits = 4;
+    } else if (Math.abs(value) >= 0.000001) {
+      effectiveDigits = 6;
+    } else {
+      effectiveDigits = 8;
+    }
+  }
+
   if (showSymbol === undefined || showSymbol === true) {
     return value.toLocaleString(undefined, {
       style: "currency",
       currency: currency?.toUpperCase() || "USD",
-      minimumFractionDigits: digits ?? 2,
-      maximumFractionDigits: digits ?? 2,
+      minimumFractionDigits: effectiveDigits,
+      maximumFractionDigits: effectiveDigits,
     });
   }
   return value.toLocaleString(undefined, {
-    minimumFractionDigits: digits ?? 2,
-    maximumFractionDigits: digits ?? 2,
+    minimumFractionDigits: effectiveDigits,
+    maximumFractionDigits: effectiveDigits,
   });
 }
 

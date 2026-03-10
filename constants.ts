@@ -86,8 +86,19 @@ export const getChartConfig = (
     },
   },
   localization: {
-    priceFormatter: (price: number) =>
-      "$" + price.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+    priceFormatter: (price: number) => {
+      let digits;
+      if (Math.abs(price) >= 1) {
+        digits = 2;
+      } else if (Math.abs(price) >= 0.01) {
+        digits = 4;
+      } else if (Math.abs(price) >= 0.000001) {
+        digits = 6;
+      } else {
+        digits = 8;
+      }
+      return "$" + price.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits });
+    },
   },
 });
 

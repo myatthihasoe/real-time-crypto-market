@@ -32,7 +32,7 @@ const Converter = ({symbol, icon, priceList}: ConverterProps) => {
                 <div className="divider">
                     <div className="line"/>
 
-                    <Image className="icon" src="/Crypto Logo2.svg" alt="converter" width={32} height={32}/>
+                    <Image className="icon" src="/converter.svg" alt="converter" width={32} height={32}/>
                 </div>
                 <div className="output-wrapper">
                     <p>{formatCurrency(convertedPrice, 2, currency, false)}</p>

@@ -3,9 +3,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import SearchModal from "@/components/SearchModal";
+
+interface HeaderProps {
+  trendingCoins: TrendingCoin[];
+}
 
 const Header = () => {
   const pathname = usePathname();
+  // Accept `trendingCoins` via props when used in server components.
   return (
     <header>
       <div className="main-container inner">
@@ -22,7 +28,7 @@ const Header = () => {
           >
             Home
           </Link>
-          <p>Search Model</p>
+          <SearchModal initialTrendingCoins={[]} />
           <Link
             href="/coins"
             className={cn("nav-link", {
