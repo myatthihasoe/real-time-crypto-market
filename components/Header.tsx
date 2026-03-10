@@ -9,9 +9,8 @@ interface HeaderProps {
   trendingCoins: TrendingCoin[];
 }
 
-const Header = () => {
+const Header = ({trendingCoins} : HeaderProps) => {
   const pathname = usePathname();
-  // Accept `trendingCoins` via props when used in server components.
   return (
     <header>
       <div className="main-container inner">
@@ -28,7 +27,7 @@ const Header = () => {
           >
             Home
           </Link>
-          <SearchModal initialTrendingCoins={[]} />
+          <SearchModal initialTrendingCoins={trendingCoins} />
           <Link
             href="/coins"
             className={cn("nav-link", {
