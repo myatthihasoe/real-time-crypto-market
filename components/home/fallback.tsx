@@ -144,6 +144,40 @@ export function CategoriesFallback() {
   );
 }
 
+export function TopGainersLosersFallback() {
+  const skeletonCoins = Array.from({ length: 4 }).map((_, i) => ({
+    id: `skeleton-${i}`,
+  }));
+
+  return (
+    <div id="top-gainers-losers">
+      <div className="tabs-list">
+        <div className="tabs-trigger tabs-trigger-skeleton skeleton" />
+        <div className="tabs-trigger tabs-trigger-skeleton skeleton" />
+      </div>
+      <div className="tabs-content">
+        <ul className="details-grid">
+          {skeletonCoins.map((coin) => (
+            <li key={coin.id}>
+              <div className="coin-header">
+                <div className="coin-image skeleton" />
+                <div className="coin-info">
+                  <div className="name-line skeleton" />
+                  <div className="symbol-line skeleton" />
+                </div>
+              </div>
+              <div className="price-row">
+                <div className="price-line skeleton" />
+                <div className="change-line skeleton" />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 // export default {
 //   CoinOverviewFallback,
 //   TrendingCoinsFallback,
